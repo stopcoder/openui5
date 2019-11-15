@@ -1062,8 +1062,31 @@ sap.ui.define([
 			mConfig = this._enhanceWithUsageConfig(sUsageId, mConfig);
 		}
 
+		var that = this;
+		function attachToEvents(oComponent) {
+			var aEvents = oComponent.getManifestEntry("/sap.ui5/events");
+			if (Array.isArray(aEvents)) {
+				aEvents.forEach(function(sEvent) {
+					oComponent.attachEvent(sEvent, function(oEvent) {
+						var oParam = {
+							name: sEvent,
+							component: oComponent,
+							parameters: oEvent.getParameters()
+						};
+						that.fireEvent("nestedComponentEvent", oParam);
+					});
+				});
+			}
+			return oComponent;
+		}
+
 		// create the component in the owner context of the current component
-		return Component._createComponent(mConfig, this);
+		var vComponent = Component._createComponent(mConfig, this);
+		if (vComponent instanceof Promise) {
+			return vComponent.then(attachToEvents);
+		} else {
+			return attachToEvents(vComponent);
+		}
 	};
 
 	/**
